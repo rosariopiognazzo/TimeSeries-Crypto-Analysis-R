@@ -1,24 +1,85 @@
 # Crypto Currencies Analysis
 The following historical series analysis project aims to examine the performance of the three cryptocurrencies with the highest current market capitalization on the digital currency market, comparing them with traditional indices such as the S&P 500 and the price of gold. The S&P 500, which includes the 500 largest companies listed on the US stock exchanges, and gold, considered a safe haven, will allow me to contextualize the behavior of the cryptocurrency series within the economic and financial landscape. The goal is to identify any relationships, recurring patterns and possible trends emerging from financial data over time.
 
-Cryptocurrencies have represented a significant segment of the digital market in recent years, thanks to growing adoption at a global level. However, it should be noted that cryptocurrencies are notoriously volatile, with price fluctuations that are often dramatic and difficult to predict. Despite this, I will try to make predictions on them using the techniques seen during the course.
+[![View Report](https://img.shields.io/badge/View%20Report-HTML-blue)](https://htmlpreview.github.io/?https://github.com/YOUR_USERNAME/Crypto-TSAnalysis/blob/main/StatisticalAnalysis.html)
 
-The project is divided into the following phases:
+---
 
-## Descriptive & Explanatory Analysis
+## Overview
 
-- Distribution of cryptocurrencies over time: We will use graphical functions such as time plots and OHLC plots to capture the trend of cryptocurrencies over time and identify any irregularities, inhomogeneities and changes in level.
+The project is divided into two main phases:
 
-- Time Series Analysis: We will try to identify characteristics of the series such as trend, seasonality and cyclicality through seasonal plots. We will study the autovariance, autocorrelation and stationarity of the series using correlograms and we will calculate their returns.
+**1. Descriptive & Explanatory Analysis**
+- OHLC interactive charts for each asset
+- Standardized comparison across all five series
+- Dependency analysis: 3D scatterplots, correlation matrices (raw and first-differenced)
+- ACF correlograms and monthly seasonal plots for each series
 
-- Dependency Analysis: We will use both graphical methods such as scatterplot and corrplot, and statistical indices to analyze any dependencies between the series.
+**2. Forecasting & Regression**
+- Stationarity achieved via daily log-returns: $r_t = \ln(P_t) - \ln(P_{t-1})$
+- White noise verification (Box-Pierce & Ljung-Box tests)
+- **Model 1** — Multivariate regression: BNB returns ~ BTC + ETH + Gold + S&P500 returns
+- **Model 2** — Univariate regression: BNB price ~ 7-day moving average trend
+- Model comparison via LOO cross-validation (RMSE, MAE, CV, AIC, BIC)
 
-## Forecasts & Regressions
+---
 
-- Decomposition of time series: We will apply the best method to decompose the time series.
+## Data
 
-- Forecasts for single cryptocurrency: We will validate forecasts for a single currency using cross-validation techniques and different forecasting metrics.
+| Asset | Ticker | Source |
+|---|---|---|
+| Bitcoin | `BTC-USD` | Yahoo Finance via `quantmod` |
+| Ethereum | `ETH-USD` | Yahoo Finance via `quantmod` |
+| Binance Coin | `BNB-USD` | Yahoo Finance via `quantmod` |
+| Gold Futures | `GC=F` | Yahoo Finance via `quantmod` |
+| S&P 500 | `^GSPC` | Yahoo Finance via `quantmod` |
 
-- Multivariate regression model: We will build a model to possibly verify the possibility of making predictions on a currency by exploiting other historical series.
+Period: **November 2017 – January 2024** (daily frequency).
 
-In summary, the project aims to analyze the interactions between cryptocurrencies, market indices and safe haven assets, ultimately trying to forecast market movements in a context of high volatility.
+---
+
+## Files
+
+```
+Crypto-TSAnalysis/
+├── StatisticalAnalysis.Rmd   # Full report with analysis and commentary
+├── StatisticalAnalysis.html  # Rendered output (open in browser)
+└── analysis.R                # Pure R code, organized by section
+```
+
+---
+
+## Requirements
+
+R packages:
+
+```r
+install.packages(c(
+  "ggplot2", "fpp", "fpp2", "quantmod", "dygraphs",
+  "seasonal", "gridExtra", "corrplot", "gplots",
+  "scatterplot3d", "reshape2", "imputeTS",
+  "glmnet", "caret", "GGally"
+))
+```
+
+---
+
+## How to Run
+
+**Full report:**
+```r
+rmarkdown::render("StatisticalAnalysis.Rmd")
+```
+
+**Code only:**
+```r
+source("analysis.R")
+```
+
+---
+
+## Viewing the Report on GitHub
+
+Since GitHub does not render HTML files directly, use the link below to preview the report in your browser:
+
+**[https://htmlpreview.github.io/?https://github.com/YOUR_USERNAME/Crypto-TSAnalysis/blob/main/StatisticalAnalysis.html](https://htmlpreview.github.io/?https://github.com/YOUR_USERNAME/Crypto-TSAnalysis/blob/main/StatisticalAnalysis.html)**
