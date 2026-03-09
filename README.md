@@ -75,11 +75,3 @@ rmarkdown::render("StatisticalAnalysis.Rmd")
 ```r
 source("analysis.R")
 ```
-
----
-
-## Viewing the Report on GitHub
-
-Since GitHub does not render HTML files directly, use the link below to preview the report in your browser:
-
-**[https://htmlpreview.github.io/?https://github.com/rosariopiognazzo/TimeSeries-Crypto-Analysis-R/blob/main/Report.html](https://htmlpreview.github.io/?https://github.com/rosariopiognazzo/TimeSeries-Crypto-Analysis-R/blob/main/Report.html)**
