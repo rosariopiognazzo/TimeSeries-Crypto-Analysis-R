@@ -4,6 +4,7 @@ author: "Rosario Pio Gnazzo"
 date: "2024-05-02"
 output: 
   html_document:
+    self_contained: true
     fig_width: 9
     fig_height: 5
 ---
@@ -725,3 +726,4 @@ Comparing the metrics between the two models, we can observe the following:
 5.  **AdjR2 (Adjusted R-squared)**: The adjusted R² for the second model is considerably higher than for the first. However, given the comparison of the other metrics regarding forecast accuracy, AdjR2 alone is not sufficient to determine which model is better.
 
 In summary, based on the presented metrics, the first model is preferable as it demonstrates higher forecast accuracy, lower variability, and better AIC and BIC values.
+
