@@ -1,0 +1,727 @@
+---
+title: "Cryptocurrency Time Series Analysis"
+author: "Rosario Pio Gnazzo"
+date: "2024-05-02"
+output: 
+  html_document:
+    fig_width: 9
+    fig_height: 5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message=FALSE, 
+                      warning=FALSE, 
+                      fig.align='center')
+library(ggplot2)
+library(fpp)
+library(quantmod)
+library(dygraphs)
+library(seasonal)
+library(gridExtra)
+library(corrplot)
+library(gplots)
+library(scatterplot3d)
+library(reshape2)
+library(imputeTS)
+library(fpp2)
+library(glmnet)
+library(caret)
+```
+
+## **Introduction**
+
+This time series analysis project aims to examine the market behavior of the three cryptocurrencies with the highest current market capitalization, comparing them with traditional indices such as the S&P 500 and the price of gold. The S&P 500, which includes the 500 largest companies listed on US stock exchanges, and gold, considered a safe-haven asset, provide context for the behavior of the cryptocurrency series within the broader economic and financial landscape. The goal is to identify potential relationships, recurring patterns, and possible emerging trends in financial data over time.
+
+In recent years, cryptocurrencies have become a significant segment of the digital market, driven by growing global adoption. However, it should be noted that cryptocurrencies are notoriously volatile, with price fluctuations that are often dramatic and difficult to predict. Despite this, forecasting attempts will be made using the techniques covered during the course.
+
+The project is structured in the following phases:
+
+-   **Descriptive & Explanatory Analysis**
+
+    -   **Distribution of cryptocurrencies over time:** Graphical tools such as time plots and OHLC plots will be used to observe cryptocurrency trends over time and identify any irregularities, inhomogeneities, and level shifts.
+
+    -   **Time Series Analysis:** Series characteristics such as trend, seasonality, and cyclicality will be identified through seasonal plots. Autocovariance, autocorrelation, and stationarity will be studied using correlograms, and returns will be computed.
+
+    -   **Dependency Analysis:** Both graphical methods such as scatterplots and corrplots, and statistical indices will be used to analyze potential dependencies between series.
+
+-   **Forecasting & Regression**
+
+    -   **Time series decomposition:** The most appropriate decomposition method will be applied to each series.
+
+    -   **Single cryptocurrency forecasting:** Forecasts for a single currency will be validated using cross-validation techniques and multiple forecast metrics.
+
+    -   **Multivariate regression model:** A model will be built to assess the possibility of forecasting one currency using the other time series.
+
+In summary, this project aims to analyze the interactions between cryptocurrencies, market indices, and safe-haven assets, ultimately attempting to forecast market movements in a high-volatility context.
+
+## **Descriptive & Explanatory Analysis**
+
+This first part of the analysis focuses on the descriptive aspect of the time series. Through graphical and quantitative tools, the defining characteristics of each series and potential relationships between them will be described.
+
+### **Time Series Visualization**
+
+The data used in this analysis are daily and track the value of each financial index over time across five dimensions: opening price, highest price, lowest price, closing price (also adjusted), and volume.
+
+We begin by observing time plots using the OHLC (Open, High, Low, Close and Volume) visualization, typically used for technical analysis of financial indices.
+
+#### Bitcoin (BTC-USD)
+
+```{r}
+BTC_USD <- getSymbols("BTC-USD", auto.assign = FALSE)
+BTC_USD <- window(BTC_USD, end = as.Date("2024-01-01"))
+
+dygraph(BTC_USD[, c("BTC-USD.Open", "BTC-USD.High",
+                       "BTC-USD.Low", "BTC-USD.Adjusted")], 
+                 main = "BTC-USD Time Series & Daily log-returs")%>%
+  dyCandlestick()%>%
+  dyLegend(width = 200)%>%
+  dyEvent("2016-07-09", "II Halving", labelLoc = "bottom") %>%
+  dyEvent("2020-05-11", "III Halving", labelLoc = "bottom") %>%
+  dyEvent("2024-04-20", "IV Halving", labelLoc = "bottom") %>%
+  dyRangeSelector(height = 20)
+
+btc_data <- BTC_USD[, c("BTC-USD.Adjusted")]
+```
+
+From the daily closing price chart of Bitcoin, we can observe that from the beginning of transactions until early 2017 the value of BTC remained nearly unchanged. In 2017, a surge brought a single BTC to $20,000, followed by a decline throughout 2018 until September, when a new growth phase began. It remained roughly stable during 2019 and early 2020, until October, when a sharp increase brought BTC's value from below $20,000 to above $60,000. Strong price oscillations followed until mid-2022, when a downward trend began lasting until the end of the year.
+
+In general, BTC's financial behavior follows a growing trend that, roughly every 3–4 years in a chaotic fashion, undergoes level shifts driven by the halving: a programmed event in the Bitcoin protocol that occurs every three to four years. During this event, the mining reward is halved. The third Bitcoin halving occurred in May 2020, reducing the reward from approximately 13 to 6 Bitcoin per block. This reduced the supply of new Bitcoin entering the market, contributing to increased demand and price. The fourth halving occurred in April 2024, and a sharp price spike is visible in the final portion of the chart.
+
+However, other factors can influence the price, leading to steep increases followed by declines that realign the value with the overall rising macro-trend.
+
+#### Ethereum (ETH-USD)
+
+```{r}
+ETH_USD <- getSymbols("ETH-USD", auto.assign = FALSE)
+ETH_USD <- window(ETH_USD, end = as.Date("2024-01-01"))
+
+dygraph(ETH_USD[, c("ETH-USD.Open", "ETH-USD.High",
+                       "ETH-USD.Low", "ETH-USD.Adjusted")], 
+                 main = "ETH-USD Time Series & Daily log-returns")%>%
+  dyCandlestick()%>%
+  dyLegend(width = 200)%>%
+  dyRangeSelector(height = 20)
+
+eth_data <- ETH_USD[, c("ETH-USD.Adjusted")]
+```
+
+Observing the chart, we notice a clear similarity between Ethereum's price trend over time and that of Bitcoin, the only difference being the actual value of the digital currency, since a single Ethereum is worth less. This is because Ethereum was not created as a digital currency, but as a decentralized blockchain-based platform designed to allow developers to create and deploy smart contracts and decentralized applications. Ethereum's goal is to decentralize the web.
+
+#### Binance Coin (BNB-USD)
+
+```{r}
+BNB_USD <- getSymbols("BNB-USD", auto.assign = FALSE)
+BNB_USD <- window(BNB_USD, end = as.Date("2024-01-01"))
+
+dygraph(BNB_USD[, c("BNB-USD.Open", "BNB-USD.High",
+                       "BNB-USD.Low", "BNB-USD.Adjusted")], 
+                 main = "BNB-USD Time Series & Daily log-returns")%>%
+  dyCandlestick()%>%
+  dyLegend(width = 200)%>%
+  dyRangeSelector(height = 20)
+
+bnb_data <- BNB_USD[, c("BNB-USD.Adjusted")]
+```
+
+Observing the behavior of Binance BNB, the third cryptocurrency by current market capitalization, we notice that until mid-2020 it remained substantially stable and was not influenced by the trend of the other two cryptocurrencies. Subsequently, a sharp level shift is observed, coinciding temporally with the level shifts seen first in BTC and then in ETH. BNB also followed a phase of decline and recovery in the final portion of the analyzed period.
+
+#### Gold (GC=F)
+
+```{r}
+#gold 
+GOLD <- getSymbols("GC=F", auto.assign = FALSE)
+GOLD <- window(GOLD, start = as.Date("2017-11-09"), 
+               end = as.Date("2024-01-02"))
+
+dygraph(GOLD[, c("GC=F.Open", "GC=F.High",
+                       "GC=F.Low", "GC=F.Adjusted")], 
+                 main = "GOLD Time Series")%>%
+  dyCandlestick()%>%
+  dyRangeSelector(height = 20)
+
+gold_data <- GOLD[, c("GC=F.Adjusted")]
+```
+
+From 2017 to 2024, the gold financial index showed constant, albeit modest, growth. This behavior exemplifies gold's nature as a safe-haven asset, with investors treating it as a secure asset during times of economic uncertainty — which explains its rise during the COVID period. However, in 2022, gold went through a period of stagnation, characterized by price stabilization without significant increases or decreases. After 2022, gold resumed its slow but steady growth.
+
+#### S&P 500 (GSPC)
+
+```{r}
+#sp500
+SP500 <- getSymbols("^GSPC", auto.assign = FALSE)
+SP500 <- window(SP500, start = as.Date("2017-11-09"), 
+               end = as.Date("2024-01-02"))
+
+dygraph(SP500[, c("GSPC.Open", "GSPC.High",
+                       "GSPC.Low", "GSPC.Adjusted")], 
+                 main = "S&P500 Time Series")%>%
+  dyCandlestick()%>%
+  dyRangeSelector(height = 20)
+
+sp500_data <- SP500[, c("GSPC.Adjusted")]
+```
+
+From the chart analysis, we can say that from 2017 to 2024, the S&P 500 showed substantial and continuous growth, reflecting the general expansion of the US economy. However, in 2020, the index suffered a significant crash due to the COVID-19 pandemic. Despite this, it began a rapid and robust recovery, leading to strong growth in 2022 that consolidated its long-term upward trend.
+
+#### Comparison of Time Series
+
+Before comparing the time series of the three cryptocurrencies with the other two financial indices, it was essential to apply additional preprocessing steps to make the comparison possible. Specifically:
+
+1.  Linear interpolation to fill missing values in the gold and S&P 500 time series.
+
+2.  All time series were then standardized, removing the scale effect, so they can be displayed on the same chart.
+
+This allows us to directly compare relative movements and trends over time, facilitating the identification of common patterns and divergences across the different assets.
+
+```{r, fig.height=3}
+# Standardization of the three time series
+#
+# truncate btc data to match the same time period
+btc_data <- subset(btc_data, index(btc_data) >= "2017-11-09")
+
+data <- cbind(btc_data, 
+              eth_data, 
+              bnb_data,
+              gold_data,
+              sp500_data)
+
+#show that for some days gold and sp500 values are missing
+data[200:205]
+
+# therefore NAs need to be handled
+gold_r <- na_interpolation(data$GC.F.Adjusted)
+ggplot_na_imputations(data$GC.F.Adjusted, gold_r,
+                      theme = theme_bw())
+sp500_r <- na_interpolation(data$GSPC.Adjusted)
+ggplot_na_imputations(data$GSPC.Adjusted, sp500_r,
+                      theme = theme_bw())
+
+data$GC.F.Adjusted <- gold_r
+data$GSPC.Adjusted <- sp500_r
+
+data <- subset(data, index(data) <= "2024-01-01")
+colnames(data) <- c("BTC.USD.Adjusted",
+                      "ETH.USD.Adjusted",
+                      "BNB.USD.Adjusted",
+                      "GOLD.USD.Adjusted",
+                      "SP500.USD.Adjusted")
+```
+
+```{r}
+# standardization for joint visualization
+standardized_bnb <- scale(data$BTC.USD.Adjusted)
+standardized_eth <- scale(data$ETH.USD.Adjusted)
+standardized_btc <- scale(data$BNB.USD.Adjusted)
+standardized_gold <- scale(data$GOLD.USD.Adjusted)
+standardized_sp500 <- scale(data$SP500.USD.Adjusted)
+
+cryptoScale <- cbind(standardized_btc, 
+                     standardized_eth, 
+                     standardized_bnb,
+                     standardized_gold,
+                     standardized_sp500)
+
+dygraph(cryptoScale, main = "Time Series Comparison (Rescaled)") %>%
+  dySeries("BTC.USD.Adjusted", label = "BTC-USD", color = "red") %>%
+  dySeries("ETH.USD.Adjusted", label = "ETH-USD", color = "blue") %>%
+  dySeries("BNB.USD.Adjusted", label = "BNB-USD", color = "green") %>%
+  dySeries("GOLD.USD.Adjusted", label = "GOLD-USD", color = "gold") %>%
+  dySeries("SP500.USD.Adjusted", label = "SP500-USD", color = "brown")
+```
+
+It is easy to see how the trend of cryptocurrencies is very similar over time. In particular, two periods emerge from the chart in which the cryptocurrency market appears to have entered a kind of "bubble": from late 2017 to 2018, and from 2021 to early 2022. Meanwhile, regarding the other two indices, we observe an S&P 500 crash in 2020, most likely caused by the Covid-19 pandemic, followed by growth in subsequent years similar to that of cryptocurrencies. Gold appears to follow a positive trend with a slowdown during the period of strong cryptocurrency growth.
+
+Let us examine the periods of interest more closely, trying to understand the behavior of the time series in light of socio-economic events:
+
+1.  **Late 2017 to 2018:** Cryptocurrencies experienced remarkable growth, unlike the other indices. This was primarily due to:
+
+    -   **Speculative frenzy and ease of access:** During 2017, a growing speculative frenzy surrounded cryptocurrencies, with more and more investors entering the market seeking quick gains. This was fueled by general euphoria toward this new market, which seemed to offer very high returns given its high volatility. Access to cryptocurrency trading was made much easier through new online trading platforms and exchange apps, further increasing demand.
+
+    -   **ICOs (Initial Coin Offerings):** Blockchain startups began implementing ICOs, raising funds for their projects by accepting other cryptocurrencies as payment. These ICOs further fueled enthusiasm around cryptocurrencies and contributed to increased demand.
+
+2.  **2020:** While cryptocurrencies did not undergo significant changes, we observe completely different behaviors between gold, which rose, and the S&P 500, which suffered a sharp crash followed by a recovery. This was due to:
+
+    1.  **Reasons for Gold Price Growth:**
+
+        -   **Safe-Haven Asset**: The pandemic created enormous uncertainty among investors, pushing them to shift funds toward safe assets like gold, traditionally considered a refuge during periods of uncertainty.
+
+        -   **Dollar Weakness and Inflation**: The increase in liquidity and low interest rates from expansionary monetary policies weakened the US dollar and increased inflation. Since gold is priced in dollars (and is also a hedge against inflation), a weaker dollar makes gold cheaper for investors holding other currencies, thereby increasing demand.
+
+    2.  **Reasons for S&P 500 Behavior:**
+
+        -   **Initial Crash**: The pandemic caused a halt in economic activity due to lockdowns and social distancing measures, leading to a collapse in demand. Uncertainty about the duration and impact of the pandemic pushed investors to sell risky assets, causing a rapid market decline.
+
+        -   **Subsequent Recovery**: Massive fiscal stimulus packages and central bank monetary policies provided liquidity and support to the economy. Over time, some economies began to reopen and recover. Furthermore, tech companies, which make up a significant portion of the S&P 500, benefited greatly from the COVID period as remote work and increased technology adoption surged.
+
+3.  **From 2021 to early 2022:**
+
+    The extremely strong growth of the digital currency market is observed, as well as growth in the S&P 500. Gold, on the other hand, appears to stall.
+
+    1.  **Crypto Market Bubble & S&P 500 Growth:**
+
+        -   **Adoption and acceptance:** During 2021, adoption of Bitcoin in particular — but also other cryptocurrencies — as a secure form of payment increased. For example, PayPal in late 2020 began allowing its users to buy, sell, and hold Bitcoin and other cryptocurrencies directly through its platform. Other companies, such as Square (2020) and Tesla (2021), also invested in cryptocurrencies. These moves contributed to growing investor confidence in digital currencies as a form of payment and medium of exchange.
+
+        -   **Blockchain investments:** The crypto world shone a large spotlight on blockchain technology, causing many new startups and large companies to begin investing heavily in the field. The growth in market capitalization of this new market inevitably influenced the S&P 500 index.
+
+        -   **Consequences of COVID monetary stimulus policies:** The pandemic pushed many central banks to implement monetary stimulus policies to sustain and revive national economies. For example, the ECB launched an emergency bond purchase program (PEPP) for both government and corporate debt, lowered interest rates to stimulate spending and investment, and took many other actions. The Federal Reserve implemented similar policies, and all of this generated concerns about inflation, pushing investors to seek to protect their purchasing power in the long run. Cryptocurrencies, especially Bitcoin, were seen by many as an alternative to traditional inflation hedges.
+
+        -   **Interest from retail investors:** 2021 also saw a strong increase in interest from retail investors, attracted above all by crypto market volatility and the perceived opportunity for high returns. This increased demand from individual investors contributed to rising average cryptocurrency prices.
+
+        It might be thought that *Ethereum and BNB are influenced by Bitcoin*, as the latter is the most well-known and highest-valued cryptocurrency. However, it is important to consider that this relationship may stem from factors common to all three cryptocurrencies, since they share the same market. Moreover, *the Bitcoin and Ethereum communities often overlap*, meaning many investors hold both and may adopt similar trading strategies, thereby linking their movements. Additionally, Bitcoin and Ethereum, being the largest cryptocurrencies on the market, tend to *react similarly to market events*, such as macroeconomic news or technical developments, which may correlate them through the market itself. As for BNB, its connection to the other two cryptocurrencies may be due to the fact that it is the native token of the Binance exchange platform. Since Binance has become one of the leading cryptocurrency exchanges, decisions and actions taken by Binance can influence the value of BNB, linking it to the trading dynamics of Bitcoin and Ethereum.
+
+    2.  **Gold's "stagnation":** This behavior can be explained by looking at Bitcoin in particular. BTC was created with the goal of being an alternative to traditional money and *a new form of decentralized currency*. For this reason, many investors have seen Bitcoin as the natural substitute for gold as a store of value, and began to prefer it due to the expectation of far greater returns.
+
+#### Dependency Measures Between Time Series
+
+The relationship hypothesized to exist between the currencies will now be examined analytically using graphical tools such as the 3D Scatter Plot. For this analysis, and for many subsequent ones, only the adjusted closing prices of the assets will be used to simplify visualization.
+
+```{r, fig.height=3.5}
+crypto <- cbind(data$BTC.USD.Adjusted, 
+                data$ETH.USD.Adjusted, 
+                data$BNB.USD.Adjusted)
+colnames(crypto) <- c("BTC", "ETH", "BNB")
+scatterplot3d(crypto$BTC, crypto$BNB, crypto$ETH,
+              xlab = "BTC", ylab = "BNB", zlab = "ETH",
+              color = "black",
+              cex.symbols = 0.5,
+              main = "Scatterplot 3D") 
+```
+
+As can be observed, there appears to be a clear and strong positive relationship between the three time series. This is further confirmed by the correlation matrix:
+
+```{r}
+cor(crypto,use = "complete.obs")
+```
+
+However, we must treat this information with caution, as it may be a result not only of the market factors listed earlier but also a case of spurious correlation driven by a characteristic common to all three series: their positive trend.
+
+For this reason, the trend is removed from the series using a **first difference**, and the relationship is re-examined.
+
+```{r}
+cryptodiff <- cbind(diff(crypto$BTC)[-1], 
+                    diff(crypto$ETH)[-1],
+                    diff(crypto$BNB)[-1])
+colnames(cryptodiff) <- c("BTC", "ETH", "BNB")
+
+p7 <- ggplot(as.data.frame(cryptodiff), 
+             aes(BTC,ETH)) +
+  geom_point()+
+  ggtitle("Scatterplot BTC - ETH")+
+  theme_bw()
+p8 <- ggplot(as.data.frame(cryptodiff), 
+             aes(BTC,BNB)) +
+  geom_point()+
+  ggtitle("Scatterplot BTC - BNB")+
+  theme_bw()
+p9 <- ggplot(as.data.frame(cryptodiff), 
+             aes(ETH,BNB)) +
+  geom_point()+
+  ggtitle("Scatterplot ETH - BNB")+
+  theme_bw()
+
+corr_matrix <- cor(cryptodiff, use = "complete.obs")
+corr_df <- melt(corr_matrix)
+
+p10 <- ggplot(data = corr_df, aes(Var1, Var2)) +
+  geom_tile(aes(fill = value), color = "white") +
+  geom_text(aes(label = round(value, 2)), color = "black") +
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0.2, limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Matrix", x = NULL, y = NULL) +
+  coord_fixed()
+
+grid.arrange(p7, p8, p9,p10, ncol = 2, nrow = 2)
+```
+
+Removing the trend, the correlation between the time series decreases, but it remains a positive correlation. Therefore, a positive relationship between the three cryptocurrencies can be confirmed.
+
+Let us now observe the relationships with the other financial indices.
+
+```{r}
+GGally::ggpairs(as.data.frame(data))+theme_bw()
+```
+
+From the scatterplots between the various time series, a strong positive relationship is visible, but just as in the previous case where we were only analyzing the crypto, this can be misleading given the upward trend of all assets. For this reason, we observe the correlations of the series obtained from the **first difference**.
+
+```{r}
+datadiff <- cbind(diff(data$BTC.USD.Adjusted)[-1], 
+                  diff(data$ETH.USD.Adjusted)[-1],
+                  diff(data$BNB.USD.Adjusted)[-1],
+                  diff(data$GOLD.USD.Adjusted)[-1],
+                  diff(data$SP500.USD.Adjusted)[-1])
+colnames(datadiff) <- c("BTC", "ETH", "BNB", "GOLD", "S&P500")
+GGally::ggpairs(as.data.frame(datadiff))+theme_bw()
+```
+
+It is now clear that, once the trend component is removed, the cryptocurrency series are only weakly linearly related to the other two indices. The relationship is slightly stronger with the S&P 500.
+
+Furthermore, observing all the financial time series used in this analysis, none of them can be considered stationary, as they do not satisfy stationarity criteria due to non-constant variance over time, level shifts, and trend.
+
+```{r, include=FALSE}
+plot_acf <- function(data, titolo) {
+  cryptoAcf <- ggAcf(data, lag.max = 365, plot = FALSE)
+  #95% confidence interval
+  ci <- 1.96 / sqrt(length(data))
+  
+  df <- data.frame(lag = cryptoAcf$lag[2:length(cryptoAcf$lag)], 
+                   acf = cryptoAcf$acf[2:length(cryptoAcf$acf)])
+  
+  # Add categorical variable for multiples of 7 and 30
+  df$multipli <- ifelse(
+    df$lag %% 7 == 0 & df$lag %% 30 == 0, "Multiples of 7 and 30",
+    ifelse(df$lag %% 7 == 0, "Multiples of 7",
+           ifelse(df$lag %% 30 == 0, "Multiples of 30",
+                  "None")))
+  
+  # ACF plot
+  ggplot(df, aes(lag, acf, fill = multipli)) +
+    geom_bar(stat = "identity", position = "dodge", width = 0.5) +
+    geom_hline(yintercept = c(-ci, ci), 
+               linetype = "dashed", color = "#00008B") +
+    xlab("lag") + ylab("ACF") +
+    ggtitle(titolo) + theme_bw() +
+    scale_fill_manual(values = c("blue", "green", "red", "#D3D3D3"),
+                      labels = c("Multiples of 7 and 30", "Multiples of 7", "Multiples of 30", "None"), 
+                      name = NULL) +
+    theme(legend.position = "bottom", legend.key.size = unit(0.5, "lines"))
+}
+
+```
+
+### Time Series Characteristics Analysis
+
+Let us now focus on analyzing the individual time series to identify their defining components: Trend, Seasonality, and Cyclicality.
+
+To illustrate these characteristics, we observe the corresponding Correlograms and Seasonal Plots.
+
+-   The ACF is useful for identifying stationary or non-stationary time series:
+    -   The ACF for a non-stationary series decreases slowly;
+    -   For non-stationary data, the value of $\hat p (1)$ is often large and positive.
+-   Seasonal Plots allow us to observe the behavior of the series across years relative to time periods. In this case, the data frequency has been reduced from daily to monthly in order to capture any potential monthly seasonal pattern.
+
+**Currencies**
+
+```{r, fig.height=3}
+btcMonth <- apply.monthly(btc_data, FUN = median)
+p1 <- ggseasonplot(ts(btcMonth, frequency = 12), polar = TRUE)+
+  ggtitle("BTC-USD\nMonthly polar seasonal plot")+
+  theme_bw()
+
+p2 <- ggsubseriesplot(ts(btcMonth, frequency = 12))+
+  ggtitle("BTC-USD\nMonthly seasonal subseries plot")+
+  ylab("")+
+  theme_bw()
+
+plot_acf(btc_data, "Bitcoin - ACF plot")
+grid.arrange(p1, p2, ncol = 2)
+```
+
+```{r, fig.height=3}
+ethMonth <- apply.monthly(eth_data, FUN = median)
+p3 <- ggseasonplot(ts(ethMonth, frequency = 12), polar = TRUE)+
+  ggtitle("ETH-USD\nMonthly polar seasonal plot")+
+  theme_bw()
+
+p4 <- ggsubseriesplot(ts(ethMonth, frequency = 12))+
+  ggtitle("ETH-USD\nMonthly seasonal subseries plot")+
+  ylab("")+
+  theme_bw()
+
+plot_acf(eth_data, "Ethereum - ACF plot")
+grid.arrange(p3, p4, ncol = 2)
+```
+
+```{r, fig.height=3}
+bnbMonth <- apply.monthly(bnb_data, FUN = median)
+p5 <- ggseasonplot(ts(bnbMonth, frequency = 12), polar = TRUE)+
+  ggtitle("BNB-USD\nMonthly polar seasonal plot")+
+  theme_bw()
+
+p6 <- ggsubseriesplot(ts(bnbMonth, frequency = 12))+
+  ggtitle("BNB-USD\nMonthly seasonal subseries plot")+
+  ylab("")+
+  theme_bw()
+
+plot_acf(bnb_data, "Binance Coin - ACF plot")
+grid.arrange(p5, p6, ncol = 2)
+```
+
+From the charts, we can observe that all three cryptocurrencies show a positive trend, confirming what was found at the beginning of the analysis. In the Seasonal Plots, there appears to be a slight monthly seasonality, with cryptocurrency prices typically peaking in June/July followed by a decline. However, this seasonality is not evident in the ACF. The behavior observed in the seasonal plots may be due to the fact that, in order to produce these visualizations, the series frequency was reduced from daily to monthly by computing the monthly median. This simplification process may have emphasized a pattern that is not actually present (or at least not as strong) in the original series.
+
+**Gold and S&P 500**
+
+```{r, fig.height=3}
+goldMonth <- apply.monthly(gold_data, FUN = median)
+p11 <- ggseasonplot(ts(goldMonth, frequency = 12), polar = TRUE)+
+  ggtitle("GOLD-USD\nMonthly polar seasonal plot")+
+  theme_bw()
+
+p12 <- ggsubseriesplot(ts(goldMonth, frequency = 12))+
+  ggtitle("GOLD-USD\nMonthly seasonal subseries plot")+
+  ylab("")+
+  theme_bw()
+
+plot_acf(gold_data, "GOLD - ACF plot")
+grid.arrange(p11, p12, ncol = 2)
+```
+
+```{r, fig.height=3}
+sp500Month <- apply.monthly(sp500_data, FUN = median)
+p13 <- ggseasonplot(ts(sp500Month, frequency = 12), polar = TRUE)+
+  ggtitle("S&P 500\nMonthly polar seasonal plot")+
+  theme_bw()
+
+p14 <- ggsubseriesplot(ts(sp500Month, frequency = 12))+
+  ggtitle("S&P 500\nMonthly seasonal subseries plot")+
+  ylab("")+
+  theme_bw()
+
+plot_acf(sp500_data, "S&P 500 - ACF plot")
+grid.arrange(p13, p14, ncol = 2)
+```
+
+From the gold and S&P 500 charts, we can observe that despite this simplification process, no seasonal component is present. Only a positive trend is visible.
+
+## Forecasting & Regression
+
+The goal of this phase is to identify a relationship between distinct markets in order to forecast the behavior of a cryptocurrency. For this analysis, the original time series will no longer be used; instead, the corresponding stationary series obtained through a decomposition process will be employed.
+
+### Decomposition — Daily Log-Returns
+
+Since making the daily price series stationary only requires a simple first difference — as this type of financial time series does not exhibit seasonality — the **daily log-returns** series will be computed. These are the returns obtained as the first difference of log-prices, which coincides with the residual component that would have been obtained from a formal decomposition.
+
+**Daily logarithmic returns**
+
+The logarithmic return is defined as
+
+$$
+r_{t} = \ln\biggl( \dfrac{P_{t}}{P_{t-1}} \biggr) = \ln(P_{t}) - \ln(P_{t-1})
+$$
+
+where $P_{t}$ is the price at time $t$ and $P_{t-1}$ is the price at the previous time step, in this case the previous day.\
+Observing the formula, the logarithmic return can be computed simply by *taking the first difference of the natural logarithms of prices.*
+
+Applying first differencing removes any trend/cycle component from a time series, and applying the logarithm also addresses the issue of non-constant variance over time.\
+Let us observe how the series change when daily log-returns are extracted:
+
+```{r, include=FALSE}
+returnsBTC <- diff(log(data$BTC.USD.Adjusted))[-1]
+returnsETH <- diff(log(data$ETH.USD.Adjusted))[-1]
+returnsBNB <- diff(log(data$BNB.USD.Adjusted))[-1]
+returnsGOLD <- diff(log(data$GOLD.USD.Adjusted))[-1]
+returnsSP500 <- diff(log(data$SP500.USD.Adjusted))[-1]
+
+returns <- cbind(returnsBTC, returnsETH, returnsBNB, returnsGOLD, returnsSP500)
+
+colnames(returns) <- c("returnsBTC", "returnsETH", "returnsBNB", "returnsGOLD", "returnsSP500")
+```
+
+```{r, fig.height=2}
+dygraph(data$BTC.USD.Adjusted, main = "BTC ")%>%
+  dyOptions(colors = "#00008B")
+dygraph(log(data$BTC.USD.Adjusted), main = "Log - BTC")%>%
+  dyOptions(colors = "#00008B")
+dygraph(returns$returnsBTC, main = "Daily log-returns BTC")%>%
+  dyOptions(colors = "#00008B")
+```
+
+```{r, fig.height=3}
+hist_btc <- gghistogram(returns$returnsBTC, add.normal = TRUE) +
+  xlab("daily log-returns")+
+  ylab("frequency")+
+  ggtitle("BTC daily log-returns histogram")+
+  theme_bw()
+
+acf_btc <- plot_acf(returns$returnsBTC, "ACF - Bitcoin returns")
+
+grid.arrange(hist_btc,acf_btc,ncol = 2)
+```
+
+```{r, out.height=2.5}
+Box.test(returns$returnsBTC,fitdf=0)
+Box.test(returns$returnsBTC,fitdf=0,type="Ljung")
+```
+
+As can be observed from both the charts and the statistical tests, the BTC log-return series follows a white noise pattern. In general, this holds true for all the series considered, and therefore the series obtained through this procedure will be used in the forecasting phase.
+
+**Objective**
+
+The objective of this phase is to attempt, as far as possible, to forecast a cryptocurrency. More specifically, forecasts will be made for the Binance Coin time series. BNB was chosen because it is more sensitive to variations in ETH and BTC due to the relationship described during the analysis phase.\
+To do so, two linear regression models will be built:
+
+1.  *Linear regression model that considers the BNB currency series in relation to the others.*
+2.  *Linear regression model that uses only the currency's own time series.*
+
+### First Model
+
+We begin by visualizing the relationships between the dependent variable and the regressors, as well as among the regressors themselves.
+
+```{r, fig.height=3.5}
+corr <- cor(returns, use = "complete.obs")
+cor_df <- melt(corr)
+
+ggplot(data = cor_df, aes(Var1, Var2)) +
+  geom_tile(aes(fill = value), color = "white") +
+  geom_text(aes(label = round(value, 2)), color = "black") +
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0.2, limits = c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Matrix", x = NULL, y = NULL) +
+  coord_fixed()
+```
+
+As observed earlier for the series obtained by first difference, the same patterns hold for returns:
+
+-   High correlations between cryptocurrency returns;
+-   Moderate correlations with traditional indices;
+
+However, we must highlight that there could be **multicollinearity** issues\
+due to the high correlations between Bitcoin and Ethereum returns. This issue can be addressed using regularization techniques such as Ridge or Lasso.
+
+A linear regression model of the following form can therefore be used: $$
+bnb_R = \beta_0 
++ \beta_1\cdot btc_R 
++ \beta_2\cdot eth_R
++ \beta_3\cdot gold_R
++ \beta_4\cdot sp500_R
++ \epsilon_{t}
+$$
+
+```{r}
+bnb_r <- as.ts(returns$returnsBNB)
+btc_r <- as.ts(returns$returnsBTC)
+eth_r <- as.ts(returns$returnsETH)
+gold_r <- as.ts(returns$returnsGOLD)
+sp500_r <- as.ts(returns$returnsSP500)
+
+fit1 <- tslm(bnb_r ~ btc_r + eth_r + gold_r + sp500_r)
+summary(fit1)
+```
+
+```{r}
+bnb_r_train <- head(bnb_r, 1795)
+btc_r_train <- head(btc_r, 1795)
+eth_r_train <- head(eth_r, 1795)
+gold_r_train <- head(gold_r, 1795)
+sp500_r_train <- head(sp500_r, 1795)
+
+trainset <- data.frame(
+  btc = btc_r_train,
+  eth = eth_r_train,
+  gold = gold_r_train,
+  sp500 = sp500_r_train
+)
+
+bnb_r_test <- tail(bnb_r, 449)
+btc_r_test <- tail(btc_r, 449)
+eth_r_test <- tail(eth_r, 449)
+gold_r_test <- tail(gold_r, 449)
+sp500_r_test <- tail(sp500_r, 449)
+
+testset <- data.frame(
+  btc = btc_r_test,
+  eth = eth_r_test,
+  gold = gold_r_test,
+  sp500 = sp500_r_test
+)
+
+
+# Train the model on training data
+mod1 <- tslm(bnb_r_train ~ btc + eth + gold + sp500, data = trainset)
+
+# Forecast on test set
+prev1 <- predict(mod1, newdata = testset)
+
+risultati <- cbind(
+  bnb_r_test,
+  ts(prev1, start = 1796, end = 2244, frequency = 1)
+)
+
+colnames(risultati) <- c("bnbTEST", "bnbPrev")
+
+dygraph(risultati, main = "Return Forecasts on Test Series") %>%
+  dySeries("bnbTEST", label = "Test Series", color = "blue") %>%
+  dySeries("bnbPrev", label = "Forecasts", color = "red")
+```
+
+Measuring model accuracy:
+
+```{r}
+accuracy(fit1, test = seq(1795,2244))
+```
+
+### Second Model
+
+This model will use the trend as a feature, extracted by computing a moving average of order 7. Since the data is daily, a weekly window makes natural sense. Furthermore, given the high volatility of the series, a window that is not too small is advisable to avoid overfitting.
+
+The model is$$
+bnb = \beta_0 
++ \beta_1\cdot trend + \epsilon_{t}
+$$
+
+```{r}
+bnbTS <- as.ts(data$BNB.USD.Adjusted)
+fit2 <- tslm(bnbTS ~ ma(bnbTS, 7))
+summary(fit2)
+```
+
+```{r, fig.height5}
+bnb.train <- head(bnbTS, 1796)
+bnb.train <- as.data.frame(bnb.train)
+bnb.test <- tail(bnbTS, 449)
+bnb.test <- as.data.frame(bnb.test)
+
+
+mod2 <- tslm(x ~ ma(x, 7), data = bnb.train)
+prev2 <- predict(mod2, newdata = bnb.test)
+
+bnbTest<-bnb.test$x
+
+testing <- cbind(ts(bnbTest, start = 1797, end = 2245, frequency = 1), 
+                 ts(prev2, start = 1797, end = 2245, frequency = 1))
+colnames(testing) <- c("bnbTEST", "bnbPrev")
+
+dygraph(testing, main = "BNB Forecasts on Test Series") %>%
+  dySeries("bnbTEST", label = "Test Series", color = "blue") %>%
+  dySeries("bnbPrev", label = "Forecasts", color = "red")
+```
+
+Measuring model accuracy:
+
+```{r}
+accuracy(fit2, test = seq(1797,2245))
+```
+
+**Model Comparison via LOO-CV Forecasts**
+
+To assess which of the two models performs better, the forecast metrics obtained using Leave-One-Out Cross-Validation will be compared.
+
+-   *First model metrics:*
+
+```{r}
+CV(fit1)
+```
+
+-   *Second model metrics:*
+
+```{r}
+CV(fit2)
+```
+
+### **Conclusion**
+
+Comparing the metrics between the two models, we can observe the following:
+
+1.  **RMSE (Root Mean Squared Error)**: The first model has an RMSE (0.0195) significantly lower than that of the second model (5.4201). This indicates that the first model's forecasts are more accurate.
+
+2.  **MAE (Mean Absolute Error)**: The MAE of the first model (0.0128) is also considerably lower than that of the second model (3.63337).
+
+3.  **CV (Coefficient of Variation)**: The CV of the first model (0.0015) is substantially lower than that of the second model (69.0194). A lower CV indicates greater stability and precision in forecasts.
+
+4.  **AIC (Akaike Information Criterion)** and **BIC (Bayesian Information Criterion)**: Both information criteria are lower for the first model than the second, suggesting that the first model is preferable in terms of data fit and complexity.
+
+5.  **AdjR2 (Adjusted R-squared)**: The adjusted R² for the second model is considerably higher than for the first. However, given the comparison of the other metrics regarding forecast accuracy, AdjR2 alone is not sufficient to determine which model is better.
+
+In summary, based on the presented metrics, the first model is preferable as it demonstrates higher forecast accuracy, lower variability, and better AIC and BIC values.
