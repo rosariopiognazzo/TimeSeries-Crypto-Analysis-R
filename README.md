@@ -42,8 +42,8 @@ Period: **November 2017 – January 2024** (daily frequency).
 
 ```
 Crypto-TSAnalysis/
-├── StatisticalAnalysis.Rmd   # Full report with analysis and commentary
-├── StatisticalAnalysis.html  # Rendered output (open in browser)
+├── Report-Complete.Rmd   # Full report with analysis and commentary
+├── Report.html  # Rendered output (open in browser)
 └── analysis.R                # Pure R code, organized by section
 ```
 
@@ -68,7 +68,7 @@ install.packages(c(
 
 **Full report:**
 ```r
-rmarkdown::render("StatisticalAnalysis.Rmd")
+rmarkdown::render("Report-Complete.Rmd")
 ```
 
 **Code only:**
