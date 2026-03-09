@@ -1,7 +1,7 @@
 # Crypto Currencies Analysis
 The following historical series analysis project aims to examine the performance of the three cryptocurrencies with the highest current market capitalization on the digital currency market, comparing them with traditional indices such as the S&P 500 and the price of gold. The S&P 500, which includes the 500 largest companies listed on the US stock exchanges, and gold, considered a safe haven, will allow me to contextualize the behavior of the cryptocurrency series within the economic and financial landscape. The goal is to identify any relationships, recurring patterns and possible trends emerging from financial data over time.
 
-[![View Report](https://img.shields.io/badge/View%20Report-HTML-blue)](https://htmlpreview.github.io/?https://github.com/YOUR_USERNAME/Crypto-TSAnalysis/blob/main/StatisticalAnalysis.html)
+[![View Report](https://img.shields.io/badge/View%20Report-HTML-blue)](https://htmlpreview.github.io/?https://github.com/rosariopiognazzo/TimeSeries-Crypto-Analysis-R/blob/main/Report.html)
 
 ---
 
@@ -82,4 +82,4 @@ source("analysis.R")
 
 Since GitHub does not render HTML files directly, use the link below to preview the report in your browser:
 
-**[https://htmlpreview.github.io/?https://github.com/YOUR_USERNAME/Crypto-TSAnalysis/blob/main/StatisticalAnalysis.html](https://htmlpreview.github.io/?https://github.com/YOUR_USERNAME/Crypto-TSAnalysis/blob/main/StatisticalAnalysis.html)**
+**[https://htmlpreview.github.io/?https://github.com/rosariopiognazzo/TimeSeries-Crypto-Analysis-R/blob/main/Report.html](https://htmlpreview.github.io/?https://github.com/rosariopiognazzo/TimeSeries-Crypto-Analysis-R/blob/main/Report.html)**
